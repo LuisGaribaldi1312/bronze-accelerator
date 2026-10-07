@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: codigo-company-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-codigodb}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_dev_only}
+      POSTGRES_DB: ${DB_NAME:-codigodb}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - codigo-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codigo-company-api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./backend:/app
+      - ./backend/node_modules:/app/node_modules
+    depends_on:
+      - postgres
+    networks:
+      - codigo-network
+
+volumes:
+  pg_data:
+
+networks:
+  codigo-network:
+    driver: bridge
